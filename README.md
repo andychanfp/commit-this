@@ -1,4 +1,6 @@
+<div style="text-align:center">
 <img src="./asset/header.jpg"/>
+</div>
 
 # commit-this
 
