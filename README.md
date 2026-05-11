@@ -4,6 +4,9 @@
 
 A Claude Code skill that reads your staged changes (or last unpublished commit), generates a [Conventional Commits](https://www.conventionalcommits.org/) message with a gitmoji prefix, and offers to run `git commit` for you. Invoke it with `/commit-this` — no arguments needed.
 
+### Cost
+100 - 300 tokens per run
+
 ## Installation
 
 **Recommended — one-line install:**
