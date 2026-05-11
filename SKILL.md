@@ -31,21 +31,18 @@ allowed-tools:
 ## Step-by-step protocol
 
 **Step 1 — Validate environment**
-Run `git rev-parse --is-inside-work-tree` to confirm a git repo. Run `git diff --staged --name-only` to detect staged files. If empty, run `git log -1 --format="%H"` to confirm a commit exists. Run `git status -sb` and inspect for `[ahead N]` — if the branch has an upstream and is not ahead, the last commit is published. Refuse and terminate on any failure with a one-line reason. Produce: `validation_pass = true` plus `input_source ∈ {staged, last_commit}`.
+Emit `checking env...`. Run `git rev-parse --is-inside-work-tree` to confirm a git repo. Run `git diff --staged --name-only` to detect staged files. If empty, run `git log -1 --format="%H"` to confirm a commit exists. Run `git status -sb` and inspect for `[ahead N]` — if the branch has an upstream and is not ahead, the last commit is published. Refuse and terminate on any failure with a one-line reason. Produce: `validation_pass = true` plus `input_source ∈ {staged, last_commit}`.
 
 **Step 2 — Read the diff**
-If `input_source = staged`, run `git diff --staged`. If `input_source = last_commit`, run `git show HEAD`. Capture the full diff text and the list of changed files. Produce: `diff_text`, `changed_files[]`.
+Emit `reading diff...`. If `input_source = staged`, run `git diff --staged`. If `input_source = last_commit`, run `git show HEAD`. Capture the full diff text and the list of changed files. Produce: `diff_text`, `changed_files[]`.
 
-**Step 3 — Infer type, scope, breaking flag, gitmoji**
-Apply rules from `refs/conventional-commits.md`:
+**Step 3 — Generate the commit message**
+Emit `generating message...`. Apply rules from `refs/conventional-commits.md` internally — do not show type, scope, breaking flag, or gitmoji selection to the user:
 - **Type**: classify against the type table (feat, fix, refactor, docs, test, chore, perf, ci, style, build, revert).
 - **Scope**: take the most specific common path segment across `changed_files[]`. Multi-domain → top-level domain.
 - **Breaking flag**: scan for renamed/removed public symbols, parameter signature changes, return type changes. If found → set `breaking = true`.
 - **Gitmoji**: look up the type in the mapping table.
 
-Produce: `type`, `scope`, `breaking`, `emoji`.
-
-**Step 4 — Draft the commit message**
 Format per the spec template in `refs/conventional-commits.md`. Use `refs/exemplars.md` to match shape:
 
 ```
@@ -58,16 +55,21 @@ Format per the spec template in `refs/conventional-commits.md`. Use `refs/exempl
 
 Subject: imperative mood, ≤72 characters, no period. Body wrapped at 72. Footer only when `breaking = true`.
 
+**Body rule**: omit the body unless `breaking = true` OR `changed_files[]` has more than 3 distinct top-level diff hunks. When omitted, the message is subject line only.
+
 Produce: `commit_message`.
 
-**Step 5 — Emit the message**
-Print `commit_message` exactly as drafted. No preamble, no metadata, no "I inferred…". Produce: rendered output to user.
+**Step 4 — Emit the command and ask**
+Output exactly one line in this format, then ask the user if they want to commit:
 
-**Step 6 — Ask to commit**
-Emit one line: `Run git commit for you? (yes / no)`.
+```
+git commit -m "<commit_message>"
+```
 
-**Step 7 — Run or terminate**
-On `yes`: run `git commit -m "<commit_message>"` via Bash. Report the resulting commit SHA. On `no` or no answer: terminate. The message is already on screen for the user to copy. Produce: commit SHA or termination.
+No preamble, no metadata, no explanation — just the `git commit -m "..."` line. Then emit: `Commit? (yes / no)`
+
+**Step 5 — Run or terminate**
+On `yes`: run the command via Bash. Report the resulting commit SHA. On `no` or no answer: terminate silently.
 
 ## References
 
